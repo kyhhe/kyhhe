@@ -1,0 +1,302 @@
+\documentclass[10pt, letterpaper]{article}
+
+% ================================================================
+% NOTE: this template must be rendered by an Environment configured
+% with the custom delimiters in render.py. In particular
+% comment_start_string MUST be overridden -- see \def\secondColumn
+% below, where "{#1}" would otherwise be read as a Jinja comment.
+% ================================================================
+
+\newcommand{\AND}{\unskip
+    \cleaders\copy\ANDbox\hskip\wd\ANDbox
+    \ignorespaces
+}
+\newsavebox\ANDbox
+\sbox\ANDbox{$|$}
+
+% Packages:
+\usepackage[
+    ignoreheadfoot,
+    top=1.3cm,
+    bottom=1.3cm,
+    left=1.4cm,
+    right=1.4cm,
+    footskip=1.0cm
+]{geometry}
+\usepackage{titlesec}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{primaryColor}{RGB}{0, 0, 0}
+\definecolor{sectionColor}{RGB}{63, 83, 120}
+\usepackage{enumitem}
+\usepackage{etoolbox}      % \AtBeginEnvironment -- was previously only
+                           % loaded by accident, as a dependency of paracol
+\usepackage{calc}
+\usepackage{changepage}
+\usepackage{paracol}
+\usepackage{needspace}
+\usepackage{iftex}
+\usepackage[
+    pdftitle={\VAR{personal.name} Resume},
+    pdfauthor={\VAR{personal.name}},
+    pdfcreator={LaTeX + Jinja},
+    colorlinks=true,
+    urlcolor=primaryColor
+]{hyperref}
+
+% Ensure that generated pdf is machine readable / ATS parsable:
+\ifPDFTeX
+    \input{glyphtounicode}
+    \pdfgentounicode=1
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+    \IfFileExists{lmodern.sty}{\usepackage{lmodern}}{}
+\fi
+
+% Degrade gracefully if the Inter package isn't installed on the build machine
+\IfFileExists{inter.sty}{
+    \usepackage[sfdefault]{inter}
+}{
+    \usepackage{helvet}
+    \renewcommand{\familydefault}{\sfdefault}
+}
+
+% Some settings:
+\raggedright
+\AtBeginEnvironment{adjustwidth}{\partopsep0pt}
+\pagestyle{empty}
+\setcounter{secnumdepth}{0}
+\setlength{\parindent}{0pt}
+\setlength{\topskip}{0pt}
+\setlength{\columnsep}{0.15cm}
+\pagenumbering{gobble}
+
+% ------------------------------------------------
+% Section formatting
+% ------------------------------------------------
+
+\titleformat{\section}
+    {\needspace{4\baselineskip}\bfseries\normalsize\color{sectionColor}}
+    {}
+    {0pt}
+    {}
+    [\vspace{1pt}\titlerule]
+
+\titlespacing{\section}
+    {-1pt}
+    {0.22cm}
+    {0.12cm}
+
+% ------------------------------------------------
+% Bullet formatting
+% ------------------------------------------------
+
+\renewcommand\labelitemi{$\vcenter{\hbox{\small$\bullet$}}$}
+
+\newenvironment{highlights}{
+    \begin{itemize}[
+        topsep=0.04cm,
+        parsep=0pt,
+        partopsep=0pt,
+        itemsep=0.02cm,
+        leftmargin=10pt
+    ]
+}{
+    \end{itemize}
+}
+
+% ------------------------------------------------
+% Entry formatting
+% ------------------------------------------------
+
+% NOTE: the 0.00001cm is LOAD-BEARING, not a typo. With exactly {0cm}{0cm},
+% changepage skips its list setup and paracol silently drops the right-hand
+% column -- every date on the resume disappears, with no LaTeX error.
+\newenvironment{onecolentry}{
+    \begin{adjustwidth}{0.00001cm}{0.00001cm}
+}{
+    \end{adjustwidth}
+}
+
+% One mandatory argument: the right-hand (right-aligned) column.
+\newenvironment{twocolentry}[1]{
+    \onecolentry
+    \def\secondColumn{#1}
+    \setcolumnwidth{\fill, 6cm}
+    \begin{paracol}{2}
+}{
+    \switchcolumn
+    \raggedleft
+    \secondColumn
+    \end{paracol}
+    \endonecolentry
+}
+
+\let\hrefWithoutArrow\href
+
+\begin{document}
+
+% ================================================================
+% HEADER
+% ================================================================
+
+\fontsize{20pt}{22pt}\selectfont
+\textbf{\VAR{personal.name}}
+
+\vspace{1pt}
+
+\normalsize
+\#{ Tuples, not dicts -- a closing brace inside a tag would end it early. }
+\BLOCK{ set contacts = [
+    ('', personal.location | default('')),
+    ('mailto:' ~ personal.email | default(''), personal.email | default('')),
+    ('tel:' ~ personal.phone_link | default(''), personal.phone_display | default('')),
+    ('https://' ~ personal.linkedin | default(''), personal.linkedin | default('')),
+    ('https://' ~ personal.github | default(''), personal.github | default('')),
+    ('https://' ~ personal.website | default(''), personal.website | default(''))
+] }
+\BLOCK{ for url, text in contacts if text }
+    \BLOCK{ if not loop.first }
+        \kern 5.0pt%
+        \AND%
+        \kern 5.0pt%
+    \BLOCK{ endif }
+    \BLOCK{ if url }
+        \mbox{\hrefWithoutArrow{\VAR{url | safe}}{\VAR{text}}}%
+    \BLOCK{ else }
+        \mbox{\VAR{text}}%
+    \BLOCK{ endif }
+\BLOCK{ endfor }
+
+\vspace{3pt}
+
+{\color{sectionColor}\hrule}
+
+% ================================================================
+% SECTIONS
+% ================================================================
+
+\BLOCK{ for section in sections if section.entries }
+\section{\VAR{section.name}}
+
+% ------------------------------------------------
+% EDUCATION
+% ------------------------------------------------
+\BLOCK{ if section.type == 'education' }
+    \BLOCK{ for entry in section.entries }
+        \begin{twocolentry}{\textit{\VAR{entry.dates | default('')}}}
+            \textbf{\VAR{entry.institution}}%
+            \BLOCK{ if entry.location }
+                , \VAR{entry.location}
+            \BLOCK{ endif }
+        \end{twocolentry}
+
+        \vspace{0.03cm}
+
+        \begin{onecolentry}
+            \textbf{\VAR{entry.degree}}%
+            \BLOCK{ if entry.gpa_line }
+                { }--- \VAR{entry.gpa_line}
+            \BLOCK{ endif }
+
+            \BLOCK{ if entry.coop_avail }
+                \begin{highlights}
+                    \item \VAR{entry.coop_avail}
+                \end{highlights}
+            \BLOCK{ endif }
+
+            \BLOCK{ if entry.courses }
+                \vspace{0.02cm}
+
+                \textbf{Relevant Coursework}
+
+                \begin{highlights}
+                    \BLOCK{ for text in entry.courses }
+                        \item \VAR{text}
+                    \BLOCK{ endfor }
+                \end{highlights}
+            \BLOCK{ endif }
+        \end{onecolentry}
+
+        \vspace{0.08cm}
+    \BLOCK{ endfor }
+
+% ------------------------------------------------
+% EXPERIENCE
+% ------------------------------------------------
+\BLOCK{ elif section.type == 'experience' }
+    \BLOCK{ for entry in section.entries }
+        \begin{twocolentry}{\textit{\VAR{entry.dates | default('')}}}
+            \textbf{\VAR{entry.bold}}%
+            \BLOCK{ if entry.italic }
+                { }--- \textit{\VAR{entry.italic}}%
+            \BLOCK{ endif }
+            \BLOCK{ if entry.location }
+                , \VAR{entry.location}
+            \BLOCK{ endif }
+        \end{twocolentry}
+
+        \vspace{0.01cm}
+
+        \BLOCK{ if entry.highlights }
+            \begin{onecolentry}
+                \begin{highlights}
+                    \BLOCK{ for text in entry.highlights }
+                        \item \VAR{text}
+                    \BLOCK{ endfor }
+                \end{highlights}
+            \end{onecolentry}
+        \BLOCK{ endif }
+
+        \vspace{0.08cm}
+    \BLOCK{ endfor }
+
+% ------------------------------------------------
+% PROJECTS
+% ------------------------------------------------
+\BLOCK{ elif section.type == 'projects' }
+    \BLOCK{ for entry in section.entries }
+        \begin{twocolentry}{\textit{\VAR{entry.dates | default('')}}}
+            \textbf{\VAR{entry.name}}%
+            \BLOCK{ if entry.technologies }
+                \hspace{0.3em}\textbar{}\hspace{0.3em}%
+                \textit{\VAR{entry.technologies | list | join(', ')}}%
+            \BLOCK{ endif }
+        \end{twocolentry}
+
+        \vspace{0.01cm}
+
+        \BLOCK{ if entry.highlights }
+            \begin{onecolentry}
+                \begin{highlights}
+                    \BLOCK{ for text in entry.highlights }
+                        \item \VAR{text}
+                    \BLOCK{ endfor }
+                \end{highlights}
+            \end{onecolentry}
+        \BLOCK{ endif }
+
+        \vspace{0.08cm}
+    \BLOCK{ endfor }
+
+% ------------------------------------------------
+% SKILLS
+% ------------------------------------------------
+\BLOCK{ elif section.type == 'skills' }
+    \BLOCK{ for entry in section.entries }
+        \begin{onecolentry}
+            \textbf{\VAR{entry.category}}:
+            \VAR{entry['items'] | list | join(', ')}
+        \end{onecolentry}
+
+        \vspace{0.03cm}
+    \BLOCK{ endfor }
+
+\BLOCK{ else }
+    \#{ Unknown section type -- fail loudly rather than emit a bare heading. }
+    \VAR{ section | unknown_section }
+\BLOCK{ endif }
+\BLOCK{ endfor }
+
+\end{document}
+
+

@@ -1,0 +1,12 @@
+[theme.light]
+# The color used for interactive elements, focus states, and accents
+primaryColor = "#52749C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+
+[theme.dark]
+primaryColor = "#3F5878"  # Accent color for dark mode
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
